@@ -1,0 +1,38 @@
+==========================================
+🚀 Render 배포 빠른 시작 가이드
+==========================================
+
+1️⃣ GitHub에 코드 업로드
+   cd C:\Users\pando\Desktop\MrDaeBak
+   git add .
+   git commit -m "Ready for Render"
+   git push
+
+2️⃣ Render 계정 생성
+   - https://render.com 접속
+   - GitHub로 로그인
+
+3️⃣ Web Service 생성
+   - "New +" → "Web Service"
+   - GitHub 저장소 연결
+   - 설정:
+     * Name: mrdabak-dinner-service
+     * Runtime: Java
+     * Build Command: cd server-java && mvn clean package -DskipTests
+     * Start Command: cd server-java && java -jar target/dinner-service-1.0.0.jar
+     * Instance: Free
+
+4️⃣ 환경 변수 추가
+   - SPRING_PROFILES_ACTIVE = production
+   - JWT_SECRET = your-strong-secret-key-here
+
+5️⃣ 배포 완료!
+   - 약 5-10분 대기
+   - URL: https://your-app.onrender.com
+   - 인터넷 어디서나 접속 가능!
+
+==========================================
+자세한 내용: RENDER_DEPLOYMENT_STEP_BY_STEP.md
+==========================================
+
+
