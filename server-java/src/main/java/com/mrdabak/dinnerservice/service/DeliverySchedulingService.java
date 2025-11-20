@@ -133,6 +133,9 @@ public class DeliverySchedulingService {
         if (orderId == null) {
             throw new IllegalArgumentException("주문 ID는 필수입니다.");
         }
+        if (orderId <= 0) {
+            throw new IllegalArgumentException("유효하지 않은 주문 ID입니다.");
+        }
         
         try {
             DeliverySchedule schedule = deliveryScheduleRepository.findByOrderId(orderId)
@@ -146,14 +149,47 @@ public class DeliverySchedulingService {
             String previousStatus = schedule.getStatus();
             if ("CANCELLED".equals(previousStatus)) {
                 System.out.println("[DeliverySchedulingService] 주문 " + orderId + "의 배달 스케줄은 이미 취소되었습니다.");
+                // Delete the schedule even if already cancelled
+                try {
+                    deliveryScheduleRepository.delete(schedule);
+                    System.out.println("[DeliverySchedulingService] 주문 " + orderId + "의 배달 스케줄이 삭제되었습니다.");
+                } catch (Exception deleteException) {
+                    System.err.println("[DeliverySchedulingService] 배달 스케줄 삭제 중 오류 발생: " + deleteException.getMessage());
+                    // Try to delete by ID as fallback
+                    try {
+                        deliveryScheduleRepository.deleteById(schedule.getId());
+                        System.out.println("[DeliverySchedulingService] 주문 " + orderId + "의 배달 스케줄이 ID로 삭제되었습니다.");
+                    } catch (Exception fallbackException) {
+                        System.err.println("[DeliverySchedulingService] 배달 스케줄 삭제 실패 (fallback도 실패): " + fallbackException.getMessage());
+                        throw new RuntimeException("배달 스케줄 삭제 중 오류가 발생했습니다: " + fallbackException.getMessage(), fallbackException);
+                    }
+                }
                 return;
             }
 
-            schedule.setStatus("CANCELLED");
-            deliveryScheduleRepository.save(schedule);
-            System.out.println("[DeliverySchedulingService] 주문 " + orderId + "의 배달 스케줄이 취소되었습니다. (이전 상태: " + previousStatus + ")");
+            // Delete the schedule instead of just marking as cancelled
+            try {
+                deliveryScheduleRepository.delete(schedule);
+                System.out.println("[DeliverySchedulingService] 주문 " + orderId + "의 배달 스케줄이 삭제되었습니다. (이전 상태: " + previousStatus + ")");
+            } catch (Exception deleteException) {
+                System.err.println("[DeliverySchedulingService] 배달 스케줄 삭제 중 오류 발생: " + deleteException.getMessage());
+                // Try to delete by ID as fallback
+                try {
+                    deliveryScheduleRepository.deleteById(schedule.getId());
+                    System.out.println("[DeliverySchedulingService] 주문 " + orderId + "의 배달 스케줄이 ID로 삭제되었습니다.");
+                } catch (Exception fallbackException) {
+                    System.err.println("[DeliverySchedulingService] 배달 스케줄 삭제 실패 (fallback도 실패): " + fallbackException.getMessage());
+                    throw new RuntimeException("배달 스케줄 삭제 중 오류가 발생했습니다: " + fallbackException.getMessage(), fallbackException);
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            // Re-throw validation errors as-is
+            throw e;
+        } catch (RuntimeException e) {
+            // Re-throw runtime errors as-is
+            throw e;
         } catch (Exception e) {
-            System.err.println("[DeliverySchedulingService] 배달 스케줄 취소 중 오류 발생: " + e.getMessage());
+            System.err.println("[DeliverySchedulingService] 배달 스케줄 취소 중 예상치 못한 오류 발생: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("배달 스케줄 취소 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
@@ -171,6 +207,29 @@ public class DeliverySchedulingService {
             return deliveryScheduleRepository.findByDepartureTimeBetween(start, end);
         }
         return deliveryScheduleRepository.findByEmployeeIdAndDepartureTimeBetween(requesterId, start, end);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeliverySchedule> getSchedulesForEmployee(Long employeeId, LocalDateTime start, LocalDateTime end) {
+        if (employeeId == null) {
+            throw new IllegalArgumentException("직원 ID는 필수입니다.");
+        }
+        if (employeeId <= 0) {
+            throw new IllegalArgumentException("유효하지 않은 직원 ID입니다.");
+        }
+        if (start == null || end == null) {
+            throw new IllegalArgumentException("시작 시간과 종료 시간은 필수입니다.");
+        }
+        if (start.isAfter(end)) {
+            throw new IllegalArgumentException("시작 시간은 종료 시간보다 이전이어야 합니다.");
+        }
+        try {
+            return deliveryScheduleRepository.findByEmployeeIdAndDepartureTimeBetween(employeeId, start, end);
+        } catch (Exception e) {
+            System.err.println("[DeliverySchedulingService] 직원 스케줄 조회 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("직원 스케줄 조회 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
     }
 
     @Transactional("transactionManager")

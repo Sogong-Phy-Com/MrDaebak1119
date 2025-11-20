@@ -109,6 +109,7 @@ public class EmployeeController {
     @GetMapping("/delivery-schedule")
     public ResponseEntity<?> getDeliverySchedule(
             @RequestParam(required = false) String date,
+            @RequestParam(required = false) Long employeeId,
             Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             return ResponseEntity.status(401).body(Map.of("error", "인증이 필요합니다."));
@@ -129,9 +130,44 @@ public class EmployeeController {
             boolean isAdmin = authentication.getAuthorities().stream()
                     .anyMatch(auth -> "ROLE_ADMIN".equals(auth.getAuthority()));
 
-            List<Map<String, Object>> response = deliverySchedulingService
-                    .getSchedulesForUser(requesterId, isAdmin, targetDate)
-                    .stream()
+            // If employeeId is specified and requester is admin, filter by that employee
+            // Otherwise, use the requester's own schedules
+            Long targetEmployeeId = null;
+            if (employeeId != null && isAdmin) {
+                // Admin can view any employee's schedule
+                // Verify that the employee exists and is actually an employee
+                User targetEmployee = userRepository.findById(employeeId).orElse(null);
+                if (targetEmployee == null) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "지정된 직원을 찾을 수 없습니다."));
+                }
+                if (!"employee".equals(targetEmployee.getRole())) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "지정된 사용자는 직원이 아닙니다."));
+                }
+                targetEmployeeId = employeeId;
+            } else if (employeeId != null && !isAdmin) {
+                // Non-admin can only view their own schedule
+                if (!employeeId.equals(requesterId)) {
+                    return ResponseEntity.status(403).body(Map.of("error", "다른 직원의 스케줄을 조회할 권한이 없습니다."));
+                }
+                targetEmployeeId = employeeId;
+            }
+
+            List<DeliverySchedule> schedules;
+            if (targetEmployeeId != null) {
+                // Get schedules for specific employee
+                LocalDateTime start = LocalDateTime.of(targetDate, java.time.LocalTime.of(0, 0));
+                LocalDateTime end = LocalDateTime.of(targetDate, java.time.LocalTime.of(23, 59, 59));
+                try {
+                    schedules = deliverySchedulingService.getSchedulesForEmployee(targetEmployeeId, start, end);
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+                }
+            } else {
+                // Use existing method
+                schedules = deliverySchedulingService.getSchedulesForUser(requesterId, isAdmin, targetDate);
+            }
+
+            List<Map<String, Object>> response = schedules.stream()
                     .map(schedule -> {
                         Map<String, Object> map = new HashMap<>();
                         map.put("id", schedule.getId());

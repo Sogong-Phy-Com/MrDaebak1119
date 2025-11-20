@@ -321,7 +321,16 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         <div className="admin-section">
-          <h2>배달 스케줄 관리</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h2 style={{ margin: 0 }}>배달 스케줄 관리</h2>
+            <button
+              onClick={() => navigate('/schedule')}
+              className="btn btn-primary"
+              style={{ padding: '8px 16px' }}
+            >
+              📅 캘린더 보기
+            </button>
+          </div>
           {scheduleError && <div className="error">{scheduleError}</div>}
           <div className="section-controls">
             <label>조회 날짜</label>

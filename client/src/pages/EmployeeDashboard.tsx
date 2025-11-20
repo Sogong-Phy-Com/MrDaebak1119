@@ -270,7 +270,16 @@ const EmployeeDashboard: React.FC = () => {
       </nav>
 
       <div className="container">
-        <h2>주문 관리</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0 }}>주문 관리</h2>
+          <button
+            onClick={() => navigate('/schedule')}
+            className="btn btn-primary"
+            style={{ padding: '8px 16px' }}
+          >
+            📅 스케줄 캘린더
+          </button>
+        </div>
 
         <div className="filter-section">
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>

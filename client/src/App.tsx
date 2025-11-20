@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 import DeliveryStatus from './pages/DeliveryStatus';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import ScheduleCalendar from './pages/ScheduleCalendar';
 import { useAuth } from './contexts/AuthContext';
 import './App.css';
 
@@ -84,6 +85,14 @@ function App() {
             element={
               <PrivateRoute requireRole="admin">
                 <AdminDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/schedule"
+            element={
+              <PrivateRoute requireRole="employee">
+                <ScheduleCalendar />
               </PrivateRoute>
             }
           />
